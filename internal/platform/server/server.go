@@ -1,9 +1,10 @@
 package server
 
 import (
-	"github.com/m4t1t0/GoCoinTracker/internal/platform/server/handler/home"
 	"fmt"
 	"github.com/gofiber/fiber/v2"
+	"github.com/m4t1t0/GoCoinTracker/internal/platform/server/handler/createAsset"
+	"github.com/m4t1t0/GoCoinTracker/internal/platform/server/handler/home"
 	"log"
 )
 
@@ -29,4 +30,5 @@ func (s *Server) Run() error {
 
 func (s *Server) registerRoutes() {
 	s.app.Get("/", home.Handler())
+	s.app.Post("/api/v1/assets", createAsset.Handler())
 }
