@@ -1,0 +1,145 @@
+openapi: 3.0.3
+info:
+  title: GoCoinTracker API
+  version: "0.1"
+  description: |
+    HTTP API for GoCoinTracker.
+
+    Current endpoints:
+    - Health/root: `GET /`
+    - Create Asset: `POST /api/v1/assets`
+servers:
+  - url: http://localhost:{port}
+    description: Local development server
+    variables:
+      port:
+        default: "8080"
+        description: Port where the service listens
+paths:
+  "/":
+    get:
+      summary: Health check
+      description: Returns service status and version.
+      tags: [system]
+      responses:
+        "200":
+          description: Service is up
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              examples:
+                ok:
+                  value:
+                    status: ok
+                    version: "0.1"
+  "/api/v1/assets":
+    post:
+      summary: Create asset tracking
+      description: |
+        Creates an asset tracking entry.
+
+        Validations:
+        - `asset`: required, alphanumeric, 3 to 50 characters
+        - `interval`: required, integer > 0
+      tags: [assets]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAssetRequest'
+            examples:
+              valid:
+                value:
+                  asset: BTC
+                  interval: 15
+      responses:
+        "200":
+          description: Asset created (echoed back by current implementation)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateAssetResponse'
+              examples:
+                ok:
+                  value:
+                    asset: BTC
+                    interval: 15
+        "400":
+          description: Invalid request or validation errors
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/BadRequestError'
+                  - $ref: '#/components/schemas/ValidationError'
+              examples:
+                parseError:
+                  summary: Invalid JSON/body
+                  value:
+                    error: invalid request body
+                    message: "expected JSON with 'asset' as string and 'interval' as integer"
+                validationError:
+                  summary: Field validation failed
+                  value:
+                    error: validation error
+                    message:
+                      - "'asset' must be alphanumeric and between 3 and 50 characters"
+                      - "'interval' must be a positive integer"
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        version:
+          type: string
+          example: "0.1"
+      required: [status, version]
+    CreateAssetRequest:
+      type: object
+      properties:
+        asset:
+          type: string
+          description: Asset symbol (alphanumeric)
+          minLength: 3
+          maxLength: 50
+          pattern: "^[A-Za-z0-9]+$"
+          example: BTC
+        interval:
+          type: integer
+          description: Refresh interval in minutes
+          minimum: 1
+          example: 15
+      required: [asset, interval]
+    CreateAssetResponse:
+      description: Echo of the created asset payload (current behavior)
+      allOf:
+        - $ref: '#/components/schemas/CreateAssetRequest'
+    BadRequestError:
+      type: object
+      properties:
+        error:
+          type: string
+          example: invalid request body
+        message:
+          type: string
+          example: "expected JSON with 'asset' as string and 'interval' as integer"
+      required: [error, message]
+    ValidationError:
+      type: object
+      properties:
+        error:
+          type: string
+          example: validation error
+        message:
+          type: array
+          items:
+            type: string
+          example:
+            - "'asset' must be alphanumeric and between 3 and 50 characters"
+            - "'interval' must be a positive integer"
+      required: [error, message]
