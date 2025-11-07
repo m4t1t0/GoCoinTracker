@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
+	"github.com/m4t1t0/GoCoinTracker/internal/asset"
 )
 
 var validate = validator.New()
@@ -17,7 +18,7 @@ type requestBody struct {
 
 // Handler processes POST /api/v1/assets requests.
 // It expects a JSON body with fields: "asset" (string) and "interval" (integer).
-func Handler() fiber.Handler {
+func Handler(svc asset.Service) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		var body requestBody
 
@@ -48,9 +49,15 @@ func Handler() fiber.Handler {
 			})
 		}
 
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{
-			"asset":    body.Asset,
-			"interval": body.Interval,
+		created, err := svc.Create(c.Context(), body.Asset, body.Interval)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error":   "failed to create asset",
+				"message": err.Error(),
+			})
+		}
+		return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+			"id": created.ID,
 		})
 	}
 }
