@@ -12,12 +12,12 @@ import (
 func Run() error {
 	port, _ := strconv.Atoi(os.Getenv("HTTP_PORT"))
 
-	dbConn, err := db.Connect()
+	gormDB, err := db.Connect()
 	if err != nil {
 		return err
 	}
 
-	repo := assetpg.New(dbConn)
+	repo := assetpg.New(gormDB)
 	assetsSvc := asset.NewService(repo)
 
 	srv := server.New(uint(port), assetsSvc)

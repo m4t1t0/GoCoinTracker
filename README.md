@@ -119,6 +119,34 @@ curl -s -X POST http://localhost:3000/api/v1/assets \
 ## Configuration
 
 - `HTTP_PORT` — the TCP port for the HTTP server (e.g., `3000`)
+- `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST`, `POSTGRES_DB` — database connection settings used to build the DSN `postgres://user:pass@host/db?sslmode=disable`.
+- `GORM_LOG_LEVEL` — optional; set to `info` locally for verbose SQL logs. Defaults to `warn` if unset.
+
+Example (local):
+```bash
+export HTTP_PORT=3000
+export POSTGRES_USER=postgres
+export POSTGRES_PASSWORD=postgres
+export POSTGRES_HOST=localhost:5432
+export POSTGRES_DB=gocointracker
+# Optional, for verbose SQL output in dev
+export GORM_LOG_LEVEL=info
+```
+
+## Database & Migrations
+
+- Schema is managed exclusively via SQL migrations located in `migrations/`.
+- There is no GORM `AutoMigrate` path enabled in any environment.
+- Use the provided Makefile tasks to manage your database:
+  - `make db-create` — create the database (if not exists)
+  - `make db-migrate` — apply all up migrations
+  - `make db-drop` — drop the database
+  - `make db-fresh` — drop, create, and migrate
+
+## GORM Logging
+
+- Default GORM log level is `warn`.
+- For local debugging, set `GORM_LOG_LEVEL=info` to see executed SQL statements and timings.
 
 ## Project Layout
 

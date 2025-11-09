@@ -2,39 +2,46 @@ package postgres
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/m4t1t0/GoCoinTracker/internal/asset"
+	"gorm.io/gorm"
 )
 
-// Repository implements asset.Repository using PostgreSQL via database/sql.
-type Repository struct {
-	db *sql.DB
+// Repository implements asset.Repository using PostgreSQL via GORM.
+ type Repository struct {
+	db *gorm.DB
 }
 
-func New(db *sql.DB) Repository {
+func New(db *gorm.DB) Repository {
 	return Repository{db: db}
 }
 
-func (r Repository) Create(ctx context.Context, name string, interval int) (asset.TrackedAsset, error) {
-	id := uuid.NewString()
-	const q = `INSERT INTO tracked_assets (id, name, interval)
-		VALUES ($1, $2, $3)
-		RETURNING id, name, interval, created_at, updated_at`
+type trackedAssetEntity struct {
+	ID        string    `gorm:"type:uuid;primaryKey"`
+	Name      string    `gorm:"column:name;not null"`
+	Interval  int       `gorm:"column:interval;not null"`
+	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime"`
+	UpdatedAt time.Time `gorm:"column:updated_at;autoUpdateTime"`
+}
 
-	var out asset.TrackedAsset
-	var createdAt, updatedAt time.Time
-	row := r.db.QueryRowContext(ctx, q, id, name, interval)
-	if err := row.Scan(&out.ID, &out.Name, &out.Interval, &createdAt, &updatedAt); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return asset.TrackedAsset{}, nil
-		}
+func (trackedAssetEntity) TableName() string { return "tracked_assets" }
+
+func (r Repository) Create(ctx context.Context, name string, interval int) (asset.TrackedAsset, error) {
+	ent := trackedAssetEntity{
+		ID:       uuid.NewString(),
+		Name:     name,
+		Interval: interval,
+	}
+	if err := r.db.WithContext(ctx).Create(&ent).Error; err != nil {
 		return asset.TrackedAsset{}, err
 	}
-	out.CreatedAt = createdAt
-	out.UpdatedAt = updatedAt
-	return out, nil
+	return asset.TrackedAsset{
+		ID:        ent.ID,
+		Name:      ent.Name,
+		Interval:  ent.Interval,
+		CreatedAt: ent.CreatedAt,
+		UpdatedAt: ent.UpdatedAt,
+	}, nil
 }
